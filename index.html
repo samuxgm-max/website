@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>眼底檢查報告系統</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+  :root {
+    --bg: #f0f4f8;
+    --surface: #ffffff;
+    --surface2: #e8eef5;
+    --border: #c9d8e8;
+    --accent: #0077b6;
+    --accent2: #5c6bc0;
+    --warn: #e07b00;
+    --danger: #c0392b;
+    --ok: #1a7f4b;
+    --text: #1e293b;
+    --muted: #64748b;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Noto Serif TC', serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 16px 60px;
+  }
+  header { text-align: center; margin-bottom: 36px; }
+  header::before {
+    content: ''; display: block;
+    width: 60px; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    margin: 0 auto 20px; border-radius: 2px;
+  }
+  h1 {
+    font-size: clamp(1.4rem, 4vw, 2rem); font-weight: 700; letter-spacing: 0.08em;
+    background: linear-gradient(135deg, #1e293b 30%, var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    line-height: 1.3;
+  }
+  .subtitle { margin-top: 8px; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.15em; font-family: 'DM Mono', monospace; }
+
+  .card {
+    width: 100%; max-width: 560px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px; margin-bottom: 20px; position: relative; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+  .section-title { font-size: 0.72rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; font-family: 'DM Mono', monospace; margin-bottom: 16px; }
+
+  .code-input {
+    width: 100%; font-family: 'DM Mono', monospace; font-size: 1.8rem;
+    letter-spacing: 0.3em; padding: 14px 18px;
+    background: var(--surface2); border: 1.5px solid var(--border); border-radius: 10px;
+    color: var(--accent); outline: none; transition: border-color 0.2s; text-align: center;
+  }
+  .code-input::placeholder { color: #b0c4d8; font-size: 1rem; letter-spacing: 0.1em; }
+  .code-input:focus { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 3px rgba(0,119,182,0.1); }
+  .code-input.error { border-color: var(--danger); color: var(--danger); }
+  .code-input.success { border-color: var(--ok); }
+  .char-counter { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--muted); text-align: right; margin-top: 6px; }
+  .error-msg { font-size: 0.78rem; color: var(--danger); margin-top: 6px; font-family: 'DM Mono', monospace; display: none; }
+
+  .decoded-grid { display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .eye-col { background: var(--surface2); border-radius: 10px; padding: 14px; border: 1px solid var(--border); }
+  .eye-label { font-size: 0.68rem; letter-spacing: 0.15em; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .field-row { display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+  .field-name { font-size: 0.78rem; color: var(--muted); }
+  .field-val { font-family: 'DM Mono', monospace; font-size: 0.9rem; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-weight: 600; }
+  .val-0 { background: #d1fae5; color: #065f46; }
+  .val-1 { background: #d9f99d; color: #3a5c0a; }
+  .val-2 { background: #fed7aa; color: #92400e; }
+  .val-3 { background: #fecaca; color: #991b1b; }
+  .val-9 { background: #e0e7ff; color: #3730a3; }
+
+  .btn-row { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px; padding: 11px 20px;
+    border-radius: 9px; font-family: 'Noto Serif TC', serif; font-size: 0.85rem;
+    font-weight: 600; cursor: pointer; border: none; letter-spacing: 0.05em; transition: all 0.15s;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--accent), #0096c7); color: #fff; flex: 1; box-shadow: 0 2px 8px rgba(0,119,182,0.25); }
+  .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0,119,182,0.3); }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent2); color: var(--accent2); background: #eef0fb; }
+  .btn-qr { background: #eef0fb; border: 1px solid #c7cdf5; color: var(--accent2); }
+  .btn-qr.active { background: #e0e7ff; border-color: var(--accent); color: var(--accent); }
+  .btn-speak { background: #eef0fb; border: 1px solid #c7cdf5; color: var(--accent2); }
+  .btn-speak.speaking { animation: pulse-border 1s infinite; }
+  @keyframes pulse-border { 0%,100%{border-color:#c7cdf5;} 50%{border-color:var(--accent2);box-shadow:0 0 10px rgba(92,107,192,0.25);} }
+  .btn-stop { background: #fff0f0; border: 1px solid #f5c6c6; color: var(--danger); }
+
+  /* QR */
+  .qr-section { margin-top: 20px; display: none; }
+  .divider { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: var(--muted); font-size: 0.72rem; font-family: 'DM Mono', monospace; letter-spacing: 0.1em; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .qr-viewport { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
+  #qrVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .qr-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .qr-frame {
+    width: 55%; max-width: 220px; aspect-ratio: 1;
+    border: 2px solid #38bdf8; border-radius: 12px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.45);
+    position: relative;
+  }
+  .qr-frame::before, .qr-frame::after { content: ''; position: absolute; width: 22px; height: 22px; border-color: #38bdf8; border-style: solid; }
+  .qr-frame::before { top:-2px; left:-2px; border-width:3px 0 0 3px; border-radius:10px 0 0 0; }
+  .qr-frame::after  { bottom:-2px; right:-2px; border-width:0 3px 3px 0; border-radius:0 0 10px 0; }
+  .scan-line { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg,transparent,#38bdf8,transparent); animation: scanAnim 2s linear infinite; }
+  @keyframes scanAnim { from{top:0;} to{top:100%;} }
+
+  .scan-status { margin-top: 10px; font-size: 0.75rem; font-family: 'DM Mono', monospace; text-align: center; min-height: 1.4em; }
+  .scan-status.scanning { color: var(--accent); animation: blink 1.4s infinite; }
+  .scan-status.found { color: var(--ok); }
+  .scan-status.err { color: var(--danger); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  #qrCanvas { display: none; }
+
+  /* Report */
+  .report-card { width: 100%; max-width: 560px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: none; animation: fadeUp 0.35s ease; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
+  .report-header { padding: 16px 22px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface2); }
+  .report-title { font-size: 0.72rem; letter-spacing: 0.2em; font-family: 'DM Mono', monospace; color: var(--muted); }
+  .severity-badge { font-family: 'DM Mono', monospace; font-size: 0.7rem; font-weight: 600; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.1em; }
+  .sev-0{background:#d1fae5;color:#065f46;} .sev-1{background:#d9f99d;color:#3a5c0a;} .sev-2{background:#fed7aa;color:#92400e;} .sev-3{background:#fecaca;color:#991b1b;} .sev-9{background:#e0e7ff;color:#3730a3;}
+  .report-body { padding: 22px; font-size: 0.95rem; line-height: 2; color: #334155; white-space: pre-wrap; }
+  .report-actions { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; background: #fafcff; }
+
+  /* 衛教卡片 */
+  .edu-section { width: 100%; max-width: 560px; display: none; animation: fadeUp 0.35s ease; }
+  .edu-section-title { font-size: 0.7rem; letter-spacing: 0.2em; color: var(--muted); font-family: 'DM Mono', monospace; margin: 18px 0 10px; }
+  .edu-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; margin-bottom: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  }
+  .edu-card-header {
+    padding: 12px 18px; display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none;
+  }
+  .edu-card-header:hover { filter: brightness(0.97); }
+  .edu-card-tag { font-size: 0.68rem; font-family: 'DM Mono', monospace; font-weight: 700; letter-spacing: 0.12em; padding: 3px 9px; border-radius: 12px; }
+  .edu-card-title { font-size: 0.92rem; font-weight: 600; flex: 1; margin: 0 12px; }
+  .edu-toggle { font-size: 0.8rem; color: var(--muted); transition: transform 0.2s; }
+  .edu-toggle.open { transform: rotate(180deg); }
+  .edu-card-body { padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s; }
+  .edu-card-body.open { max-height: 1400px; padding: 4px 18px 18px; }
+  .edu-section-label { font-size: 0.68rem; letter-spacing: 0.12em; color: var(--muted); font-family: 'DM Mono', monospace; margin: 12px 0 4px; }
+  .edu-text { font-size: 0.88rem; line-height: 1.85; color: #334155; }
+  .edu-list { font-size: 0.85rem; line-height: 1.9; color: #334155; padding-left: 0; list-style: none; }
+  .edu-list li::before { content: '▸ '; color: var(--accent); font-size: 0.75rem; }
+  .edu-warn-box { background: #fff5f5; border: 1px solid #fecaca; border-radius: 8px; padding: 10px 14px; margin-top: 8px; font-size: 0.84rem; color: #991b1b; line-height: 1.8; }
+  .edu-interval { display: inline-flex; align-items: center; gap: 6px; font-family: 'DM Mono', monospace; font-size: 0.8rem; margin-top: 10px; background: var(--surface2); padding: 5px 12px; border-radius: 8px; }
+  .edu-footer { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+  /* Amsler 格子 */
+  .amsler-wrap { margin: 14px 0 4px; }
+  .amsler-label { font-size: 0.68rem; letter-spacing: 0.12em; color: var(--muted); font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .amsler-cards { display: flex; gap: 10px; flex-wrap: wrap; }
+  .amsler-card { flex: 1; min-width: 130px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
+  .amsler-card svg { display: block; margin: 0 auto 6px; }
+  .amsler-card-title { font-size: 0.75rem; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+  .amsler-card-desc  { font-size: 0.7rem; color: var(--muted); line-height: 1.5; }
+  .btn-edu-speak {
+    display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 9px;
+    font-family: 'Noto Serif TC', serif; font-size: 0.84rem; font-weight: 700; cursor: pointer;
+    border: 1px solid #0d4d76; background: linear-gradient(135deg, #0e7490, #2563eb);
+    color: #ffffff; transition: transform 0.15s, box-shadow 0.15s, filter 0.15s;
+    box-shadow: 0 3px 10px rgba(37,99,235,0.3);
+  }
+  .btn-edu-speak:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 5px 14px rgba(37,99,235,0.35); }
+  .btn-edu-speak:focus-visible { outline: 3px solid rgba(14,116,144,0.28); outline-offset: 2px; }
+  .btn-edu-speak.speaking { animation: pulse-border 1s infinite; }
+  .btn-edu-speak-mac {
+    border-color: #9a3412;
+    background: linear-gradient(135deg, #ea580c, #dc2626);
+    box-shadow: 0 4px 14px rgba(220,38,38,0.32);
+  }
+  .btn-edu-speak-mac:hover { box-shadow: 0 6px 16px rgba(220,38,38,0.4); }
+  .btn-edu-stop { display: none; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px; font-family: 'Noto Serif TC', serif; font-size: 0.82rem; font-weight: 600; cursor: pointer; border: 1px solid #f5c6c6; background: #fff0f0; color: var(--danger); }
+  .btn-edu-stop.visible { display: inline-flex; }
+  .tag-disc-1{background:#d9f99d;color:#3a5c0a;} .tag-disc-2{background:#fed7aa;color:#92400e;} .tag-disc-3{background:#fecaca;color:#991b1b;} .tag-disc-9{background:#e0e7ff;color:#3730a3;}
+  .tag-mac-1{background:#d9f99d;color:#3a5c0a;}  .tag-mac-2{background:#fed7aa;color:#92400e;}  .tag-mac-3{background:#fecaca;color:#991b1b;}  .tag-mac-9{background:#e0e7ff;color:#3730a3;}
+  .tag-dr-1{background:#d9f99d;color:#3a5c0a;}   .tag-dr-2{background:#fed7aa;color:#92400e;}   .tag-dr-3{background:#fecaca;color:#991b1b;}   .tag-dr-9{background:#e0e7ff;color:#3730a3;}
+  .hdr-1{background:#f0fdf4;} .hdr-2{background:#fffbeb;} .hdr-3{background:#fff1f2;} .hdr-9{background:#f5f3ff;}
+
+  /* Q&A 卡片 */
+  .qa-section { width: 100%; max-width: 560px; display: none; animation: fadeUp 0.35s ease; margin-bottom: 20px; }
+  .qa-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
+  .qa-q { padding: 12px 18px; cursor: pointer; font-size: 0.9rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: var(--surface2); }
+  .qa-q:hover { filter: brightness(0.97); }
+  .qa-a { font-size: 0.88rem; line-height: 1.85; color: #334155; padding: 0 18px; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s; }
+  .qa-a.open { max-height: 400px; padding: 12px 18px; }
+
+  .schedule-wrap { overflow-x: auto; margin-top: 8px; }
+  .schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 0.82rem;
+  }
+  .schedule-table th, .schedule-table td {
+    border: 1px solid #d7e0ea;
+    padding: 8px;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  .schedule-table thead th {
+    background: #f2f6fb;
+    text-align: center;
+    font-weight: 700;
+  }
+  .schedule-rowhead {
+    background: #f8fafc;
+    text-align: center;
+    font-weight: 700;
+    width: 64px;
+    white-space: nowrap;
+  }
+  .schedule-note {
+    padding: 8px 2px 0;
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.6;
+  }
+
+  /* 免責聲明 */
+  .disclaimer {
+    width: 100%; max-width: 560px;
+    background: #f0f4ff;
+    border: 1px solid #c7cdf5;
+    border-left: 3px solid var(--accent2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-top: 8px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .disclaimer-icon {
+    font-size: 1rem;
+    margin-top: 2px;
+    flex-shrink: 0;
+    color: var(--accent2);
+  }
+  .disclaimer-text {
+    font-size: 0.78rem;
+    line-height: 1.7;
+    color: #475569;
+    font-family: 'Noto Serif TC', serif;
+  }
+  .disclaimer-text strong {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    color: var(--accent2);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 4px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>眼底檢查報告系統</h1>
+  <div class="subtitle">FUNDUS EXAMINATION REPORT GENERATOR</div>
+</header>
+
+<div class="card">
+  <div class="section-title">輸入 8 位檢查代碼</div>
+  <input class="code-input" id="inputCode" type="text" maxlength="8"
+    placeholder="00000000" inputmode="numeric" autocomplete="off" oninput="onInput()">
+  <div class="char-counter"><span id="charCount">0</span> / 8 位</div>
+  <div class="error-msg" id="errorMsg">每位數只能為 0、1、2、3 或 9</div>
+
+  <div class="decoded-grid" id="decodedGrid">
+    <div class="eye-col">
+      <div class="eye-label">OD 右眼</div>
+      <div class="field-row"><span class="field-name">影像品質</span><span class="field-val" id="v_OD_img">-</span></div>
+      <div class="field-row"><span class="field-name">視神經盤</span><span class="field-val" id="v_OD_d">-</span></div>
+      <div class="field-row"><span class="field-name">黃斑部</span><span class="field-val" id="v_OD_m">-</span></div>
+      <div class="field-row"><span class="field-name">視網膜病變</span><span class="field-val" id="v_OD_r">-</span></div>
+    </div>
+    <div class="eye-col">
+      <div class="eye-label">OS 左眼</div>
+      <div class="field-row"><span class="field-name">影像品質</span><span class="field-val" id="v_OS_img">-</span></div>
+      <div class="field-row"><span class="field-name">視神經盤</span><span class="field-val" id="v_OS_d">-</span></div>
+      <div class="field-row"><span class="field-name">黃斑部</span><span class="field-val" id="v_OS_m">-</span></div>
+      <div class="field-row"><span class="field-name">視網膜病變</span><span class="field-val" id="v_OS_r">-</span></div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="generateReport()">▶ 生成報告</button>
+    <button class="btn btn-qr" id="qrBtn" onclick="toggleQR()">⬡ 掃描 QR</button>
+  </div>
+
+  <div class="qr-section" id="qrSection">
+    <div class="divider">攝影機即時掃描</div>
+    <div class="qr-viewport">
+      <video id="qrVideo" playsinline autoplay muted></video>
+      <div class="qr-overlay">
+        <div class="qr-frame"><div class="scan-line"></div></div>
+      </div>
+    </div>
+    <canvas id="qrCanvas"></canvas>
+    <div class="scan-status scanning" id="scanStatus">● 正在掃描，請將 QR Code 對準框內…</div>
+  </div>
+</div>
+
+<div class="report-card" id="reportCard">
+  <div class="report-header">
+    <span class="report-title">REPORT OUTPUT</span>
+    <span class="severity-badge" id="sevBadge">—</span>
+  </div>
+  <div class="report-body" id="reportText"></div>
+  <div class="report-actions">
+    <button class="btn btn-speak" id="speakBtn" onclick="readReport()">🔊 朗讀</button>
+    <button class="btn btn-stop" id="stopBtn" onclick="stopSpeech()" style="display:none;">■ 停止</button>
+    <button class="btn btn-secondary" style="margin-left:auto;" onclick="copyReport()">複製</button>
+  </div>
+</div>
+
+<!-- 衛教資訊區 -->
+<div class="edu-section" id="eduSection">
+  <div class="edu-section-title">PATIENT EDUCATION｜衛教資訊</div>
+  <div id="eduCards"></div>
+</div>
+
+<!-- Q&A 常見問答 -->
+<div class="qa-section" id="qaSection">
+  <div class="edu-section-title">Q&A｜常見問答</div>
+  <div id="qaCards"></div>
+</div>
+
+<div class="disclaimer">
+  <div class="disclaimer-icon">ℹ</div>
+  <div class="disclaimer-text">
+    <strong>DISCLAIMER｜免責聲明</strong>
+    本報告係根據眼底攝影影像結果自動生成，僅供參考。完整的眼科診斷仍需前往眼科由專科醫師進行詳細檢查後方能確認。
+  </div>
+</div>
+
+<script>
+// ── QR (jsQR + getUserMedia) ──────────────────────────────────────────────────
+let stream = null, scanLoop = null, qrActive = false;
+
+async function toggleQR() {
+  qrActive ? stopQR() : await startQR();
+}
+
+async function startQR() {
+  const section = document.getElementById('qrSection');
+  const btn = document.getElementById('qrBtn');
+  const status = document.getElementById('scanStatus');
+  const video = document.getElementById('qrVideo');
+
+  section.style.display = 'block';
+  btn.textContent = '✕ 關閉掃描';
+  btn.classList.add('active');
+  qrActive = true;
+
+  status.textContent = '● 正在啟動攝影機…';
+  status.className = 'scan-status scanning';
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    });
+    video.srcObject = stream;
+    video.oncanplay = () => {
+      video.play().catch(() => {});
+      requestAnimationFrame(() => {
+        status.textContent = '● 正在掃描，請將 QR Code 對準框內…';
+        tick();
+      });
+    };
+  } catch (err) {
+    qrActive = false;
+    status.textContent = '⚠ 無法開啟攝影機：' + err.message;
+    status.className = 'scan-status err';
+  }
+}
+
+let lastTickTime = 0;
+function tick(timestamp) {
+  const video = document.getElementById('qrVideo');
+  const canvas = document.getElementById('qrCanvas');
+  const status = document.getElementById('scanStatus');
+
+  if (!qrActive) return;
+
+  // 每 150ms 掃一次，避免過度消耗 CPU
+  if (timestamp - lastTickTime < 150) {
+    scanLoop = requestAnimationFrame(tick);
+    return;
+  }
+  lastTickTime = timestamp;
+
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+
+  if (video.readyState >= 2 && w > 0 && h > 0) {
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(video, 0, 0, w, h);
+    try {
+      const img = ctx.getImageData(0, 0, w, h);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
+      if (code) {
+        const txt = code.data.trim();
+        if (/^\d{8}$/.test(txt)) {
+          status.textContent = '✓ 掃描成功：' + txt;
+          status.className = 'scan-status found';
+          document.getElementById('inputCode').value = txt;
+          onInput();
+          setTimeout(() => { stopQR(); generateReport(); }, 500);
+          return;
+        } else {
+          status.textContent = '⚠ 內容無效（' + txt.slice(0,20) + '），需為 8 位數字';
+          status.className = 'scan-status err';
+        }
+      } else {
+        // 維持掃描中提示
+        if (status.className.includes('err')) {
+          status.textContent = '● 正在掃描，請將 QR Code 對準框內…';
+          status.className = 'scan-status scanning';
+        }
+      }
+    } catch(e) {
+      status.textContent = '⚠ 解碼錯誤：' + e.message;
+      status.className = 'scan-status err';
+    }
+  }
+  scanLoop = requestAnimationFrame(tick);
+}
+
+function stopQR() {
+  cancelAnimationFrame(scanLoop);
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  const video = document.getElementById('qrVideo');
+  video.srcObject = null;
+  document.getElementById('qrSection').style.display = 'none';
+  const btn = document.getElementById('qrBtn');
+  btn.textContent = '⬡ 掃描 QR';
+  btn.classList.remove('active');
+  qrActive = false;
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+const VALID_VALS = [0,1,2,3,9];
+
+function onInput() {
+  const inp = document.getElementById('inputCode');
+  const raw = inp.value.replace(/\D/g,'').slice(0,8);
+  inp.value = raw;
+  document.getElementById('charCount').textContent = raw.length;
+  inp.classList.remove('error','success');
+  document.getElementById('errorMsg').style.display = 'none';
+  if (raw.length < 8) { document.getElementById('decodedGrid').style.display = 'none'; return; }
+  const digits = raw.split('').map(Number);
+  if (!digits.every(d => VALID_VALS.includes(d))) {
+    inp.classList.add('error');
+    document.getElementById('errorMsg').style.display = 'block';
+    document.getElementById('decodedGrid').style.display = 'none';
+    return;
+  }
+  inp.classList.add('success');
+  showDecoded(digits);
+  // 8位完成後自動生成報告並朗讀
+  setTimeout(() => { generateReport(); setTimeout(() => readReport(), 400); }, 150);
+}
+
+function showDecoded(d) {
+  const ids = ['OD_img','OD_d','OD_m','OD_r','OS_img','OS_d','OS_m','OS_r'];
+  d.forEach((v,i) => {
+    const el = document.getElementById('v_'+ids[i]);
+    el.textContent = v; el.className = 'field-val val-'+v;
+  });
+  document.getElementById('decodedGrid').style.display = 'grid';
+}
+
+// ── Report ────────────────────────────────────────────────────────────────────
+function generateReport() {
+  const raw = document.getElementById('inputCode').value.trim();
+  if (!/^\d{8}$/.test(raw)) { document.getElementById('inputCode').classList.add('error'); document.getElementById('errorMsg').style.display='block'; return; }
+  const d = raw.split('').map(Number);
+  if (!d.every(v => VALID_VALS.includes(v))) { document.getElementById('errorMsg').style.display='block'; return; }
+
+  const [OD_img,OD_d,OD_m,OD_r,OS_img,OS_d,OS_m,OS_r] = d;
+  const OD_sev = OD_img===1?9:Math.max(OD_d,OD_m,OD_r);
+  const OS_sev = OS_img===1?9:Math.max(OS_d,OS_m,OS_r);
+  const Overall = Math.max(OD_sev,OS_sev);
+  const DISC=Math.max(OD_d,OS_d), MAC=Math.max(OD_m,OS_m), DR=Math.max(OD_r,OS_r);
+
+  const imgT =(v,s)=>v===0?`${s}眼底影像品質尚可，`:`${s}眼底影像品質不佳，判讀受限，`;
+  const discT=(v,s)=>v===0?`${s}視神經盤未見明顯異常，`:v<=3?`${s}視神經盤疑似異常，`:v===9?`${s}視神經盤無法判讀，`:'';
+  const macT =(v,s)=>v===0?`${s}黃斑部未見明顯異常，`:v<=3?`${s}黃斑部疑似異常，`:v===9?`${s}黃斑部無法判讀，`:'';
+  const drT  =(v,s)=>({0:`${s}未見明顯糖尿病視網膜病變。`,1:`${s}懷疑糖尿病視網膜病變。`,2:`${s}懷疑糖尿病視網膜病變，可能影響視力。`,3:`${s}糖尿病視網膜病變嚴重，需緊急處理。`,9:`${s}無法判讀糖尿病視網膜病變。`}[v]||'');
+
+  const R = imgT(OD_img,'右眼')+discT(OD_d,'右眼')+macT(OD_m,'右眼')+drT(OD_r,'右眼');
+  const L = imgT(OS_img,'左眼')+discT(OS_d,'左眼')+macT(OS_m,'左眼')+drT(OS_r,'左眼');
+  const S = '綜合評估：'+({0:'目前未見明顯異常；',1:'疑似早期病變；',2:'已有視力風險；',3:'高風險狀態；',9:'影像判讀受限；'}[Overall]||'');
+  const edu = [
+    DISC&&{1:'視神經疑似早期變化',2:'視神經可能異常',3:'視神經異常風險高',9:'視神經無法判讀'}[DISC],
+    MAC &&{1:'黃斑部疑似早期變化',2:'黃斑部可能影響視力',3:'黃斑部異常風險高',9:'黃斑部無法判讀'}[MAC],
+    DR  &&{1:'疑似早期糖尿病視網膜病變',2:'糖尿病視網膜病變可能影響視力',3:'糖尿病視網膜病變風險高',9:'糖尿病視網膜病變無法判讀'}[DR]
+  ].filter(Boolean);
+  const E = edu.length ? edu.join('，')+'。' : '';
+  const A = '建議：'+({0:'定期追蹤。',1:'請定期追蹤並留意視力變化。',2:'建議轉診眼科進一步檢查。',3:'請儘速就醫。',9:'建議重新檢查。'}[Overall]||'');
+
+  const report = R+'\n'+L+'\n\n'+S+(E?'\n'+E:'')+'\n'+A;
+
+  const badge = document.getElementById('sevBadge');
+  badge.textContent = {0:'正常 NORMAL',1:'早期 EARLY',2:'警示 WARNING',3:'緊急 URGENT',9:'受限 LIMITED'}[Overall]||'';
+  badge.className = 'severity-badge sev-'+Overall;
+  document.getElementById('reportText').textContent = report;
+  const rc = document.getElementById('reportCard');
+  rc.style.display = 'block';
+  rc.scrollIntoView({behavior:'smooth',block:'nearest'});
+  stopSpeech();
+  renderEdu(DISC, MAC, DR);
+  renderQA(DISC, MAC, DR);
+}
+
+// ── 衛教資料庫 ────────────────────────────────────────────────────────────────
+const EDU_DB = {
+  disc: {
+    1: {
+      title: '視神經盤疑似早期變化',
+      desc: '視神經盤是眼睛傳遞訊號給大腦的出入口。早期輕微變化可能是青光眼的前兆，目前尚無明顯視力影響，但需要持續觀察。',
+      actions: ['每半年回診追蹤視神經、眼壓與視野','若有頭痛或視野模糊請告知醫師'],
+      warning: '視野突然缺損、眼睛脹痛、看燈光出現光暈',
+      interval: '6 個月'
+    },
+    2: {
+      title: '視神經盤可能異常',
+      desc: '視神經盤的結構出現可疑變化，可能與青光眼或其他視神經疾病有關。若不及時追蹤，可能造成不可逆的視野損失。',
+      actions: ['儘快預約眼科進行眼壓與視野檢查','記錄是否有視野缺損（如某個方向看不清楚）','告知家族史（青光眼有遺傳傾向）'],
+      warning: '視野缺損加劇、眼壓升高感、急性眼睛疼痛',
+      interval: '3 個月內'
+    },
+    3: {
+      title: '視神經異常風險高',
+      desc: '視神經盤出現明顯異常，視神經損傷的風險很高。視神經一旦受損通常無法完全恢復，需要立即就醫評估。',
+      actions: ['本週內就醫，勿拖延','可前往眼科門診或醫院急診','就醫時攜帶本檢查報告'],
+      warning: '視野突然大範圍缺損、眼睛劇烈疼痛、視力急速下降',
+      interval: '立即就醫'
+    },
+    9: {
+      title: '視神經盤無法判讀',
+      desc: '本次眼底影像品質不佳，視神經盤區域無法清楚判讀，可能原因包括白內障、散瞳不足或拍攝時移動。',
+      actions: ['安排重新拍攝（請配合散瞳）','若有白內障，治療後再重新評估','拍攝時請保持眼睛睜大、固定不動'],
+      warning: '無特定警示症狀，但若視力突然改變請立即就醫',
+      interval: '重新檢查後評估'
+    }
+  },
+  mac: {
+    1: {
+      title: '黃斑部疑似早期變化',
+      desc: '黃斑部負責我們最清晰的中心視力。早期變化可能出現輕微的影像扭曲或顏色辨別困難，定期追蹤有助於早期介入。',
+      actions: ['每天用 Amsler 格子表自我檢測（若線條歪曲請告知醫師）','補充葉黃素（可諮詢醫師或藥師）','減少紫外線曝曬，戶外配戴太陽眼鏡'],
+      warning: '影像中心出現暗點、直線看起來扭曲或變形',
+      interval: '6 個月'
+    },
+    2: {
+      title: '黃斑部可能影響視力',
+      desc: '黃斑部出現較明顯的病變，可能影響閱讀、辨識人臉等精細視覺工作。部分情況（如新生血管）需要注射治療才能控制。',
+      actions: ['儘快就診眼科，進行光學同調斷層掃描（OCT）','若為糖尿病患者，積極控制血糖與血壓','戒菸（吸菸會加速黃斑部退化）'],
+      warning: '中心視野出現固定暗點、閱讀文字出現缺字或模糊',
+      interval: '1–3 個月內'
+    },
+    3: {
+      title: '黃斑部異常風險高',
+      desc: '黃斑部出現嚴重病變，中心視力可能正在快速惡化。若為濕性老年性黃斑部病變，每延誤一天都可能造成更多視力損失。',
+      actions: ['本週內就醫，勿等待','眼科可評估是否需要玻璃體內注射治療','就醫時攜帶本報告及過去眼科病歷'],
+      warning: '中心視力突然模糊、影像嚴重扭曲、出現大面積暗點',
+      interval: '立即就醫'
+    },
+    9: {
+      title: '黃斑部無法判讀',
+      desc: '本次影像的黃斑部區域無法清楚判讀，建議重新安排高品質眼底攝影，以確保準確評估。',
+      actions: ['安排重新檢查','若近期視力有明顯變化，應主動告知醫師','配合散瞳以取得更清晰影像'],
+      warning: '無特定警示症狀，但視力突然改變請立即就醫',
+      interval: '重新檢查後評估'
+    }
+  },
+  dr: {
+    1: {
+      title: '疑似早期糖尿病視網膜病變',
+      desc: '糖尿病長期影響視網膜的微血管，早期可能出現微小出血點或滲漏。此階段通常無症狀，但積極控制血糖可以有效減緩進展。',
+      actions: ['將 HbA1c 控制在 7% 以下（遵醫師建議）','每年定期接受眼底散瞳檢查','同時控制血壓與血脂'],
+      warning: '視力突然模糊、漂浮黑點增加',
+      interval: '6–12 個月'
+    },
+    2: {
+      title: '糖尿病視網膜病變可能影響視力',
+      desc: '視網膜出現較明顯的血管病變，可能進入增殖前期，若未控制可能發展為嚴重的視力喪失。雷射治療或注射治療可以有效控制病情。',
+      actions: ['儘快就診眼科，評估是否需要雷射或注射治療','嚴格控制血糖，與內科/家醫科配合','控制血壓（目標 130/80 mmHg 以下）'],
+      warning: '視野出現陰影、飛蚊症突然增加、視力快速下降',
+      interval: '3 個月內'
+    },
+    3: {
+      title: '糖尿病視網膜病變風險高',
+      desc: '視網膜病變已進入嚴重階段，可能出現玻璃體出血或視網膜剝離的風險。若不立即治療，可能在短期內造成嚴重甚至永久性視力喪失。',
+      actions: ['立即就醫，本週內完成眼科評估','避免劇烈運動或用力（可能加重出血）','就醫時告知目前血糖控制狀況與用藥'],
+      warning: '突然大量黑點或紅色陰影、視力驟降、眼前出現閃光',
+      interval: '立即就醫'
+    },
+    9: {
+      title: '糖尿病視網膜病變無法判讀',
+      desc: '影像品質不足以判讀糖尿病視網膜病變程度。糖尿病患者仍需定期接受眼底檢查，建議重新拍攝以確保不遺漏早期病變。',
+      actions: ['重新安排散瞳眼底攝影','若白內障影響判讀，應與醫師討論是否優先處理白內障','持續控制血糖，不因影像受限而忽略追蹤'],
+      warning: '視力突然改變請立即就醫，不要等下次回診',
+      interval: '重新檢查後評估'
+    }
+  }
+};
+
+const QA_DB = [
+  { scope: ['通用'], q: '門診可加號時間', a: `
+    <div>健康台灣智慧護眼聯盟｜眼科轉介加號時段</div>
+    <div class="schedule-wrap">
+      <table class="schedule-table" aria-label="眼科轉介加號時段">
+        <thead>
+          <tr>
+            <th></th>
+            <th>星期一</th>
+            <th>星期二</th>
+            <th>星期三</th>
+            <th>星期四</th>
+            <th>星期五</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th class="schedule-rowhead">上午</th>
+            <td>楊嶺（雙週）</td>
+            <td>黃從恩</td>
+            <td>—</td>
+            <td>莊蘭馨<br>楊嶺</td>
+            <td>呂沛庭<br>莊蘭馨</td>
+          </tr>
+          <tr>
+            <th class="schedule-rowhead">下午</th>
+            <td>呂沛庭（雙週）<br>吳政修</td>
+            <td>黃從恩<br>呂沛庭（單週）<br>吳政修（雙週）</td>
+            <td>莊蘭馨</td>
+            <td>呂沛庭</td>
+            <td>黃從恩（單週）<br>吳政修<br>楊嶺</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="schedule-note">備註：時段與醫師安排依院方實際公告為準。</div>
+  ` },
+  { scope: ['通用'], q: '看得到代表沒問題嗎？', a: '早期的糖尿病視網膜病變，視網膜可能已經有血管的變化及出血或血管滲出物，但是可能還沒有影響視力，所以看得到不代表沒有問題。' },
+  { scope: ['通用'], q: '眼底檢查和一般視力檢查有什麼不同？', a: '眼底檢查是檢查眼睛裡面的視網膜、黃斑部及視神經，屬於眼睛結構性的檢查；而一般的視力檢查是檢測眼睛看清晰的程度，是屬於功能性的檢查。兩者互補，不能互相取代。' },
+  { scope: ['dr'], q: '糖尿病一定會影響眼睛嗎？', a: '糖尿病如果控制得好，可能比較不會影響眼睛的視力；但如果控制不好或得糖尿病時間較長，則有一定的機率會影響眼睛的視力。定期眼底檢查是早期發現的關鍵。' },
+  { scope: ['mac'], q: '黃斑部病變可以治療嗎？', a: '黃斑部疾病有許多是可以治療的，尤其是早期發現，在其對視力造成重大影響前治療，效果會更好。' },
+  { scope: ['disc'], q: '青光眼會遺傳嗎？', a: '青光眼有一定的機率會有家族性，所以家族成員有青光眼的狀況下，需要更加小心，建議定期接受眼壓與視野檢查。' },
+  { scope: ['通用'], q: '轉診眼科需要準備什麼資料？', a: '需要準備本次檢查報告、健保卡，若有的話也請攜帶轉診單。就醫時告知醫師目前用藥情況與相關慢性病史，有助於醫師做出更精確的評估。' },
+  { scope: ['9'], q: '影像品質不好是我的問題嗎？', a: '影像品質不好，不一定是病人本身的問題，有許多拍照的因素會影響，例如白內障、散瞳不足等。但來門診可以做更詳細的檢查以排除疾病的可能，建議重新安排散瞳後拍攝。' },
+  { scope: ['通用'], q: '多久需要做一次眼底檢查？', a: '若風險較低，建議可以一年做一次例行性檢查；若風險較高，則依據風險程度縮短間隔，可能需要每 3–6 個月追蹤一次。' },
+  { scope: ['通用'], q: '眼底檢查會痛嗎？散瞳後有什麼注意事項？', a: '眼底檢查常常需要散瞳，點散瞳劑會有一點點刺痛，時間可能持續 3 到 5 分鐘。散瞳後視力會暫時模糊約 4 到 6 個小時，請避免自行開車。散瞳可能會有青光眼的風險，若有頭痛、噁心症狀請告知醫師。' },
+  { scope: ['dr'], q: '血糖控制好了眼底還需要追蹤嗎？', a: '即使血糖控制得很好，但得糖尿病的時間較久，仍然有機會會有糖尿病視網膜病變，所以仍需定期追蹤眼底。' }
+];
+
+// ── 衛教卡片渲染 ──────────────────────────────────────────────────────────────
+const ITEM_LABELS = { disc: '視神經盤', mac: '黃斑部', dr: '糖尿病視網膜病變' };
+const SEV_LABELS  = { 1: '早期', 2: '警示', 3: '緊急', 9: '受限' };
+
+function renderEdu(DISC, MAC, DR) {
+  const container = document.getElementById('eduCards');
+  container.innerHTML = '';
+  const items = [['disc',DISC],['mac',MAC],['dr',DR]];
+  let hasCard = false;
+  items.forEach(([key, val]) => {
+    if (!val || !EDU_DB[key][val]) return;
+    hasCard = true;
+    const d = EDU_DB[key][val];
+    const id = `edu-${key}`;
+    const hdrCls = `hdr-${val}`;
+    const tagCls = `tag-${key}-${val}`;
+    const actionsHtml = d.actions.map(a=>`<li>${a}</li>`).join('');
+
+    // Amsler 格子（只在黃斑部卡片顯示）
+    const amslerHtml = key === 'mac' ? `
+      <div class="amsler-wrap">
+        <div class="amsler-label">AMSLER 格子自我檢測示意</div>
+        <div class="amsler-cards">
+          <div class="amsler-card">
+            <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+              <rect width="110" height="110" fill="#1a1a1a" rx="4"/>
+              <!-- grid lines -->
+              <g stroke="#ffffff" stroke-width="0.6" opacity="0.55">
+                ${Array.from({length:11},(_,i)=>`<line x1="${i*10+5}" y1="5" x2="${i*10+5}" y2="105"/>`).join('')}
+                ${Array.from({length:11},(_,i)=>`<line x1="5" y1="${i*10+5}" x2="105" y2="${i*10+5}"/>`).join('')}
+              </g>
+              <!-- centre dot -->
+              <circle cx="55" cy="55" r="2.5" fill="#ffffff"/>
+            </svg>
+            <div class="amsler-card-title">正常</div>
+            <div class="amsler-card-desc">格線筆直、<br>四角完整可見</div>
+          </div>
+          <div class="amsler-card">
+            <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+              <rect width="110" height="110" fill="#1a1a1a" rx="4"/>
+              <!-- distorted grid: outer lines normal, inner lines wavy near centre -->
+              <g stroke="#ffffff" stroke-width="0.6" opacity="0.55">
+                <!-- vertical lines – outer ones straight, inner ones warped -->
+                <line x1="5"  y1="5" x2="5"  y2="105"/>
+                <line x1="15" y1="5" x2="15" y2="105"/>
+                <line x1="25" y1="5" x2="25" y2="105"/>
+                <path d="M35 5 C35 30, 32 42, 28 55 C24 68, 35 80, 35 105" fill="none"/>
+                <path d="M45 5 C45 28, 40 40, 36 55 C32 70, 45 78, 45 105" fill="none"/>
+                <path d="M55 5 C55 25, 48 38, 44 55 C40 72, 55 76, 55 105" fill="none"/>
+                <path d="M65 5 C65 28, 70 40, 74 55 C78 70, 65 78, 65 105" fill="none"/>
+                <path d="M75 5 C75 30, 78 42, 82 55 C86 68, 75 80, 75 105" fill="none"/>
+                <line x1="85" y1="5" x2="85" y2="105"/>
+                <line x1="95" y1="5" x2="95" y2="105"/>
+                <line x1="105" y1="5" x2="105" y2="105"/>
+                <!-- horizontal lines – outer ones straight, inner ones warped -->
+                <line x1="5" y1="5"  x2="105" y2="5"/>
+                <line x1="5" y1="15" x2="105" y2="15"/>
+                <line x1="5" y1="25" x2="105" y2="25"/>
+                <path d="M5 35 C30 35, 42 32, 55 28 C68 24, 80 35, 105 35" fill="none"/>
+                <path d="M5 45 C28 45, 40 40, 55 36 C70 32, 78 45, 105 45" fill="none"/>
+                <path d="M5 55 C25 55, 38 48, 55 44 C72 40, 76 55, 105 55" fill="none"/>
+                <path d="M5 65 C28 65, 40 70, 55 74 C70 78, 78 65, 105 65" fill="none"/>
+                <path d="M5 75 C30 75, 42 78, 55 82 C68 86, 80 75, 105 75" fill="none"/>
+                <line x1="5" y1="85" x2="105" y2="85"/>
+                <line x1="5" y1="95" x2="105" y2="95"/>
+                <line x1="5" y1="105" x2="105" y2="105"/>
+              </g>
+              <!-- centre dot -->
+              <circle cx="55" cy="55" r="2.5" fill="#ffffff"/>
+              <!-- distortion highlight -->
+              <ellipse cx="55" cy="55" rx="18" ry="18" fill="none" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="3 2" opacity="0.8"/>
+            </svg>
+            <div class="amsler-card-title">格線扭曲</div>
+            <div class="amsler-card-desc">線條彎曲變形、<br>請告知醫師</div>
+          </div>
+          <div class="amsler-card">
+            <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+              <rect width="110" height="110" fill="#1a1a1a" rx="4"/>
+              <g stroke="#ffffff" stroke-width="0.6" opacity="0.55">
+                ${Array.from({length:11},(_,i)=>`<line x1="${i*10+5}" y1="5" x2="${i*10+5}" y2="105"/>`).join('')}
+                ${Array.from({length:11},(_,i)=>`<line x1="5" y1="${i*10+5}" x2="105" y2="${i*10+5}"/>`).join('')}
+              </g>
+              <!-- dark spot near centre -->
+              <ellipse cx="55" cy="52" rx="13" ry="11" fill="#1a1a1a" stroke="none"/>
+              <ellipse cx="55" cy="52" rx="13" ry="11" fill="rgba(0,0,0,0.85)"/>
+              <circle cx="55" cy="55" r="2.5" fill="#ffffff"/>
+              <ellipse cx="55" cy="52" rx="13" ry="11" fill="none" stroke="#ef4444" stroke-width="1.2" stroke-dasharray="3 2" opacity="0.85"/>
+            </svg>
+            <div class="amsler-card-title">出現暗點</div>
+            <div class="amsler-card-desc">中心模糊或缺失、<br>請告知醫師</div>
+          </div>
+        </div>
+        <div style="font-size:0.72rem;color:var(--muted);margin-top:8px;line-height:1.6;">
+          檢測方式：距離約 30 公分，遮住一眼，專注凝視中央白點，觀察格線是否筆直、四角是否完整可見。
+        </div>
+      </div>` : '';
+
+    container.insertAdjacentHTML('beforeend', `
+      <div class="edu-card">
+        <div class="edu-card-header ${hdrCls}" onclick="toggleEduCard('${id}')">
+          <span class="edu-card-tag ${tagCls}">${ITEM_LABELS[key]}｜${SEV_LABELS[val]}</span>
+          <span class="edu-card-title">${d.title}</span>
+          <span class="edu-toggle" id="tog-${id}">▾</span>
+        </div>
+        <div class="edu-card-body" id="${id}">
+          <div class="edu-section-label">說明</div>
+          <div class="edu-text">${d.desc}</div>
+          <div class="edu-section-label">您可以做的事</div>
+          <ul class="edu-list">${actionsHtml}</ul>
+          ${amslerHtml}
+          <div class="edu-section-label">出現以下症狀請立刻就醫</div>
+          <div class="edu-warn-box">⚠ ${d.warning}</div>
+          <div class="edu-interval">⏱ 建議追蹤：${d.interval}</div>
+          <div class="edu-footer">
+            <button class="btn-edu-speak ${key==='mac' ? 'btn-edu-speak-mac' : ''}" id="espk-${id}" onclick="readEduCard('${id}','${key}',${val})">${key==='mac' ? '🔊 朗讀黃斑部衛教' : '🔊 朗讀此衛教'}</button>
+            <button class="btn-edu-stop" id="estp-${id}" onclick="stopEduSpeech()">■ 停止</button>
+          </div>
+        </div>
+      </div>`);
+  });
+  document.getElementById('eduSection').style.display = hasCard ? 'block' : 'none';
+}
+
+function toggleEduCard(id) {
+  const body = document.getElementById(id);
+  const tog = document.getElementById('tog-'+id);
+  const open = body.classList.toggle('open');
+  tog.classList.toggle('open', open);
+}
+
+function renderQA(DISC, MAC, DR) {
+  const container = document.getElementById('qaCards');
+  container.innerHTML = '';
+  const activeScopes = new Set(['通用']);
+  if (DISC > 0) activeScopes.add('disc');
+  if (MAC  > 0) activeScopes.add('mac');
+  if (DR   > 0) activeScopes.add('dr');
+  if (DISC===9||MAC===9||DR===9) activeScopes.add('9');
+
+  const relevant = QA_DB.filter(q => q.scope.some(s => activeScopes.has(s)));
+  if (!relevant.length) { document.getElementById('qaSection').style.display='none'; return; }
+
+  relevant.forEach((item, i) => {
+    const id = `qa-${i}`;
+    container.insertAdjacentHTML('beforeend', `
+      <div class="qa-card">
+        <div class="qa-q" onclick="toggleQA('${id}')">
+          <span>${item.q}</span><span>▾</span>
+        </div>
+        <div class="qa-a" id="${id}">${item.a}</div>
+      </div>`);
+  });
+  document.getElementById('qaSection').style.display = 'block';
+}
+
+function toggleQA(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+// ── TTS ───────────────────────────────────────────────────────────────────────
+let currentEduSpkId = null;
+
+function readEduCard(id, key, val) {
+  const d = EDU_DB[key][val];
+  const text = [
+    `${ITEM_LABELS[key]}衛教資訊。`,
+    `說明：${d.desc}`,
+    `您可以做的事：${d.actions.join('。')}。`,
+    `若出現以下症狀請立刻就醫：${d.warning}。`,
+    `建議追蹤間隔：${d.interval}。`
+  ].join('　');
+
+  stopAllSpeech();
+  currentEduSpkId = id;
+  const spkBtn = document.getElementById('espk-'+id);
+  const stpBtn = document.getElementById('estp-'+id);
+  spkBtn.classList.add('speaking');
+  stpBtn.classList.add('visible');
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-TW'; utter.rate = 0.9;
+  const zh = speechSynthesis.getVoices().find(v=>v.lang==='zh-TW')||speechSynthesis.getVoices().find(v=>v.lang.startsWith('zh'));
+  if (zh) utter.voice = zh;
+  utter.onend = utter.onerror = () => { clearEduSpkUI(id); };
+  speechSynthesis.speak(utter);
+}
+
+function stopEduSpeech() {
+  speechSynthesis.cancel();
+  if (currentEduSpkId) { clearEduSpkUI(currentEduSpkId); currentEduSpkId = null; }
+}
+
+function clearEduSpkUI(id) {
+  document.getElementById('espk-'+id)?.classList.remove('speaking');
+  document.getElementById('estp-'+id)?.classList.remove('visible');
+}
+
+function stopAllSpeech() {
+  speechSynthesis.cancel();
+  if (currentEduSpkId) { clearEduSpkUI(currentEduSpkId); currentEduSpkId = null; }
+  document.getElementById('speakBtn')?.classList.remove('speaking');
+  const s = document.getElementById('stopBtn'); if (s) s.style.display='none';
+}
+
+function readReport() {
+  const text = document.getElementById('reportText').textContent;
+  if (!text) return;
+  stopAllSpeech();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = 'zh-TW'; utter.rate = 0.9;
+  const zh = speechSynthesis.getVoices().find(v=>v.lang==='zh-TW')||speechSynthesis.getVoices().find(v=>v.lang.startsWith('zh'));
+  if (zh) utter.voice = zh;
+  const btn=document.getElementById('speakBtn'), stop=document.getElementById('stopBtn');
+  btn.classList.add('speaking'); stop.style.display='inline-flex';
+  utter.onend = utter.onerror = ()=>{ btn.classList.remove('speaking'); stop.style.display='none'; };
+  speechSynthesis.speak(utter);
+}
+function stopSpeech() {
+  stopAllSpeech();
+}
+function copyReport() {
+  navigator.clipboard.writeText(document.getElementById('reportText').textContent).then(()=>{
+    const b=event.target, o=b.textContent; b.textContent='✓ 已複製';
+    setTimeout(()=>b.textContent=o,1500);
+  });
+}
+speechSynthesis.onvoiceschanged = ()=>speechSynthesis.getVoices();
+</script>
+
+</body>
+</html>
