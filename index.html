@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0040)file:///Users/samwu/Downloads/index.html -->
+<html lang="zh-Hant"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>眼底檢查報告系統</title>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<link href="./眼底檢查報告系統智v7_files/css2" rel="stylesheet">
+<script src="./眼底檢查報告系統智v7_files/jsQR.js"></script>
 <style>
   :root {
     --bg: #f0f4f8;
@@ -193,6 +193,21 @@
   .tag-dr-1{background:#d9f99d;color:#3a5c0a;}   .tag-dr-2{background:#fed7aa;color:#92400e;}   .tag-dr-3{background:#fecaca;color:#991b1b;}   .tag-dr-9{background:#e0e7ff;color:#3730a3;}
   .hdr-1{background:#f0fdf4;} .hdr-2{background:#fffbeb;} .hdr-3{background:#fff1f2;} .hdr-9{background:#f5f3ff;}
 
+  /* Q&A 分類標題 */
+  .qa-category-header {
+    display: flex; align-items: center; gap: 8px;
+    margin: 18px 0 8px;
+    padding: 0 4px;
+  }
+  .qa-category-header:first-child { margin-top: 0; }
+  .qa-category-icon { font-size: 1rem; }
+  .qa-category-title {
+    font-size: 0.72rem; letter-spacing: 0.18em; color: var(--accent2);
+    font-family: 'DM Mono', monospace; font-weight: 700; text-transform: uppercase;
+    border-bottom: 1.5px solid var(--accent2); padding-bottom: 2px;
+  }
+  .qa-arrow { flex-shrink: 0; }
+
   /* Q&A 卡片 */
   .qa-section { width: 100%; max-width: 560px; display: none; animation: fadeUp 0.35s ease; margin-bottom: 20px; }
   .qa-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.05); }
@@ -277,8 +292,7 @@
 
 <div class="card">
   <div class="section-title">輸入 8 位檢查代碼</div>
-  <input class="code-input" id="inputCode" type="text" maxlength="8"
-    placeholder="00000000" inputmode="numeric" autocomplete="off" oninput="onInput()">
+  <input class="code-input" id="inputCode" type="text" maxlength="8" placeholder="00000000" inputmode="numeric" autocomplete="off" oninput="onInput()">
   <div class="char-counter"><span id="charCount">0</span> / 8 位</div>
   <div class="error-msg" id="errorMsg">每位數只能為 0、1、2、3 或 9</div>
 
@@ -307,7 +321,7 @@
   <div class="qr-section" id="qrSection">
     <div class="divider">攝影機即時掃描</div>
     <div class="qr-viewport">
-      <video id="qrVideo" playsinline autoplay muted></video>
+      <video id="qrVideo" playsinline="" autoplay="" muted=""></video>
       <div class="qr-overlay">
         <div class="qr-frame"><div class="scan-line"></div></div>
       </div>
@@ -338,7 +352,7 @@
 
 <!-- Q&A 常見問答 -->
 <div class="qa-section" id="qaSection">
-  <div class="edu-section-title">Q&A｜常見問答</div>
+  <div class="edu-section-title">Q&amp;A｜常見問答</div>
   <div id="qaCards"></div>
 </div>
 
@@ -631,8 +645,12 @@ const EDU_DB = {
   }
 };
 
+// ── Q&A 分類設定 ─────────────────────────────────────────────────────────────
+// category: 決定此題屬於哪個顯示分組
+// scope:    決定此題在哪些情境下顯示（通用=全部、disc=視神經異常、mac=黃斑部異常、dr=糖尿病視網膜病變、9=影像受限）
 const QA_DB = [
-  { scope: ['通用'], q: '門診可加號時間', a: `
+  // ── 掛號與就醫 ────────────────────────────────────────────────────────────
+  { category: '掛號與就醫', scope: ['通用'], q: '門診可加號時間', a: `
     <div>健康台灣智慧護眼聯盟｜眼科轉介加號時段</div>
     <div class="schedule-wrap">
       <table class="schedule-table" aria-label="眼科轉介加號時段">
@@ -668,16 +686,37 @@ const QA_DB = [
     </div>
     <div class="schedule-note">備註：時段與醫師安排依院方實際公告為準。</div>
   ` },
-  { scope: ['通用'], q: '看得到代表沒問題嗎？', a: '早期的糖尿病視網膜病變，視網膜可能已經有血管的變化及出血或血管滲出物，但是可能還沒有影響視力，所以看得到不代表沒有問題。' },
-  { scope: ['通用'], q: '眼底檢查和一般視力檢查有什麼不同？', a: '眼底檢查是檢查眼睛裡面的視網膜、黃斑部及視神經，屬於眼睛結構性的檢查；而一般的視力檢查是檢測眼睛看清晰的程度，是屬於功能性的檢查。兩者互補，不能互相取代。' },
-  { scope: ['dr'], q: '糖尿病一定會影響眼睛嗎？', a: '糖尿病如果控制得好，可能比較不會影響眼睛的視力；但如果控制不好或得糖尿病時間較長，則有一定的機率會影響眼睛的視力。定期眼底檢查是早期發現的關鍵。' },
-  { scope: ['mac'], q: '黃斑部病變可以治療嗎？', a: '黃斑部疾病有許多是可以治療的，尤其是早期發現，在其對視力造成重大影響前治療，效果會更好。' },
-  { scope: ['disc'], q: '青光眼會遺傳嗎？', a: '青光眼有一定的機率會有家族性，所以家族成員有青光眼的狀況下，需要更加小心，建議定期接受眼壓與視野檢查。' },
-  { scope: ['通用'], q: '轉診眼科需要準備什麼資料？', a: '需要準備本次檢查報告、健保卡，若有的話也請攜帶轉診單。就醫時告知醫師目前用藥情況與相關慢性病史，有助於醫師做出更精確的評估。' },
-  { scope: ['9'], q: '影像品質不好是我的問題嗎？', a: '影像品質不好，不一定是病人本身的問題，有許多拍照的因素會影響，例如白內障、散瞳不足等。但來門診可以做更詳細的檢查以排除疾病的可能，建議重新安排散瞳後拍攝。' },
-  { scope: ['通用'], q: '多久需要做一次眼底檢查？', a: '若風險較低，建議可以一年做一次例行性檢查；若風險較高，則依據風險程度縮短間隔，可能需要每 3–6 個月追蹤一次。' },
-  { scope: ['通用'], q: '眼底檢查會痛嗎？散瞳後有什麼注意事項？', a: '眼底檢查常常需要散瞳，點散瞳劑會有一點點刺痛，時間可能持續 3 到 5 分鐘。散瞳後視力會暫時模糊約 4 到 6 個小時，請避免自行開車。散瞳可能會有青光眼的風險，若有頭痛、噁心症狀請告知醫師。' },
-  { scope: ['dr'], q: '血糖控制好了眼底還需要追蹤嗎？', a: '即使血糖控制得很好，但得糖尿病的時間較久，仍然有機會會有糖尿病視網膜病變，所以仍需定期追蹤眼底。' }
+  { category: '掛號與就醫', scope: ['通用'], q: '轉診眼科需要準備什麼資料？', a: '需要準備本次檢查報告、健保卡，若有的話也請攜帶轉診單。就醫時告知醫師目前用藥情況與相關慢性病史，有助於醫師做出更精確的評估。' },
+
+  // ── 眼底檢查一般說明 ──────────────────────────────────────────────────────
+  { category: '眼底檢查說明', scope: ['通用'], q: '眼底檢查和一般視力檢查有什麼不同？', a: '眼底檢查是檢查眼睛裡面的視網膜、黃斑部及視神經，屬於眼睛結構性的檢查；而一般的視力檢查是檢測眼睛看清晰的程度，是屬於功能性的檢查。兩者互補，不能互相取代。' },
+  { category: '眼底檢查說明', scope: ['通用'], q: '看得到代表沒問題嗎？', a: '早期的糖尿病視網膜病變，視網膜可能已經有血管的變化及出血或血管滲出物，但是可能還沒有影響視力，所以看得到不代表沒有問題。' },
+  { category: '眼底檢查說明', scope: ['通用'], q: '眼底檢查會痛嗎？散瞳後有什麼注意事項？', a: '眼底檢查常常需要散瞳，點散瞳劑會有一點點刺痛，時間可能持續 3 到 5 分鐘。散瞳後視力會暫時模糊約 4 到 6 個小時，請避免自行開車。散瞳可能會有青光眼的風險，若有頭痛、噁心症狀請告知醫師。' },
+  { category: '眼底檢查說明', scope: ['通用'], q: '多久需要做一次眼底檢查？', a: '若風險較低，建議可以一年做一次例行性檢查；若風險較高，則依據風險程度縮短間隔，可能需要每 3–6 個月追蹤一次。' },
+  { category: '眼底檢查說明', scope: ['9'], q: '影像品質不好是我的問題嗎？', a: '影像品質不好，不一定是病人本身的問題，有許多拍照的因素會影響，例如白內障、散瞳不足等。但來門診可以做更詳細的檢查以排除疾病的可能，建議重新安排散瞳後拍攝。' },
+
+  // ── 視神經／青光眼相關 ────────────────────────────────────────────────────
+  { category: '視神經與青光眼', scope: ['disc'], q: '青光眼會遺傳嗎？', a: '青光眼有一定的機率會有家族性，所以家族成員有青光眼的狀況下，需要更加小心，建議定期接受眼壓與視野檢查。' },
+  { category: '視神經與青光眼', scope: ['disc'], q: '青光眼一定要手術嗎？', a: '不一定。青光眼的治療依嚴重程度不同，輕中度通常先以眼藥水控制眼壓為主；若藥物效果不佳，才會考慮雷射或手術。早期發現、配合治療是保護視力的最好方式。' },
+  { category: '視神經與青光眼', scope: ['disc'], q: '視野缺損可以恢復嗎？', a: '青光眼造成的視野缺損通常是永久性的，無法完全恢復。但積極治療可以有效延緩或停止進一步的損傷，保留現有視力。這也是為什麼早期診斷如此重要。' },
+
+  // ── 黃斑部相關 ────────────────────────────────────────────────────────────
+  { category: '黃斑部病變', scope: ['mac'], q: '黃斑部病變可以治療嗎？', a: '黃斑部疾病有許多是可以治療的，尤其是早期發現，在其對視力造成重大影響前治療，效果會更好。' },
+  { category: '黃斑部病變', scope: ['mac'], q: '什麼是老年性黃斑部病變？', a: '老年性黃斑部病變（AMD）是一種影響黃斑部的退化性疾病，好發於 50 歲以上。分為「乾性」與「濕性」兩種，濕性進展快速，需要及時注射治療以防止視力快速喪失。' },
+
+  // ── 糖尿病視網膜病變相關 ──────────────────────────────────────────────────
+  { category: '糖尿病視網膜病變', scope: ['dr'], q: '糖尿病一定會影響眼睛嗎？', a: '糖尿病如果控制得好，可能比較不會影響眼睛的視力；但如果控制不好或得糖尿病時間較長，則有一定的機率會影響眼睛的視力。定期眼底檢查是早期發現的關鍵。' },
+  { category: '糖尿病視網膜病變', scope: ['dr'], q: '血糖控制好了眼底還需要追蹤嗎？', a: '即使血糖控制得很好，但得糖尿病的時間較久，仍然有機會會有糖尿病視網膜病變，所以仍需定期追蹤眼底。' },
+  { category: '糖尿病視網膜病變', scope: ['dr'], q: '糖尿病視網膜病變可以雷射治療嗎？', a: '可以。視網膜雷射光凝固術是治療增殖性糖尿病視網膜病變的標準療法之一，可以封閉異常新生血管，減少玻璃體出血的風險。醫師會依病情決定是否適合雷射治療。' },
+];
+
+// Q&A 分類顯示設定（決定順序與標題）
+const QA_CATEGORIES = [
+  { key: '掛號與就醫',       icon: '🏥', scopes: ['通用'] },
+  { key: '眼底檢查說明',     icon: '🔍', scopes: ['通用', '9'] },
+  { key: '視神經與青光眼',   icon: '👁', scopes: ['disc'] },
+  { key: '黃斑部病變',       icon: '🟡', scopes: ['mac'] },
+  { key: '糖尿病視網膜病變', icon: '🩸', scopes: ['dr'] },
 ];
 
 // ── 衛教卡片渲染 ──────────────────────────────────────────────────────────────
@@ -819,20 +858,39 @@ function renderQA(DISC, MAC, DR) {
   if (DR   > 0) activeScopes.add('dr');
   if (DISC===9||MAC===9||DR===9) activeScopes.add('9');
 
-  const relevant = QA_DB.filter(q => q.scope.some(s => activeScopes.has(s)));
-  if (!relevant.length) { document.getElementById('qaSection').style.display='none'; return; }
+  let hasAny = false;
+  let qaIndex = 0;
 
-  relevant.forEach((item, i) => {
-    const id = `qa-${i}`;
+  QA_CATEGORIES.forEach(cat => {
+    const catActive = cat.scopes.some(s => activeScopes.has(s));
+    if (!catActive) return;
+
+    const items = QA_DB.filter(q =>
+      q.category === cat.key && q.scope.some(s => activeScopes.has(s))
+    );
+    if (!items.length) return;
+
+    hasAny = true;
+
     container.insertAdjacentHTML('beforeend', `
-      <div class="qa-card">
-        <div class="qa-q" onclick="toggleQA('${id}')">
-          <span>${item.q}</span><span>▾</span>
-        </div>
-        <div class="qa-a" id="${id}">${item.a}</div>
+      <div class="qa-category-header">
+        <span class="qa-category-icon">${cat.icon}</span>
+        <span class="qa-category-title">${cat.key}</span>
       </div>`);
+
+    items.forEach(item => {
+      const id = `qa-${qaIndex++}`;
+      container.insertAdjacentHTML('beforeend', `
+        <div class="qa-card">
+          <div class="qa-q" onclick="toggleQA('${id}')">
+            <span>${item.q}</span><span class="qa-arrow">▾</span>
+          </div>
+          <div class="qa-a" id="${id}">${item.a}</div>
+        </div>`);
+    });
   });
-  document.getElementById('qaSection').style.display = 'block';
+
+  document.getElementById('qaSection').style.display = hasAny ? 'block' : 'none';
 }
 
 function toggleQA(id) {
@@ -909,5 +967,6 @@ function copyReport() {
 speechSynthesis.onvoiceschanged = ()=>speechSynthesis.getVoices();
 </script>
 
-</body>
-</html>
+
+
+</body></html>
