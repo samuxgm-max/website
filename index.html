@@ -972,21 +972,23 @@ function copyReport() {
 }
 speechSynthesis.onvoiceschanged = ()=>speechSynthesis.getVoices();
 
-// ── URL Hash 自動載入 ─────────────────────────────────────────────────────────
-function loadFromHash() {
-  const hash = location.hash.replace('#', '').trim();
+// ── URL Hash 自動載入（同分頁即時同步） ─────────────────────────────────────
+let lastHashSynced = "";
+function loadFromHash(force = false) {
+  const hash = location.hash.replace("#", "").trim();
+  if (!force && hash === lastHashSynced) return;
+  lastHashSynced = hash;
   if (/^\d{8}$/.test(hash)) {
-    const inp = document.getElementById('inputCode');
+    const inp = document.getElementById("inputCode");
     inp.value = hash;
     onInput();
   }
 }
-window.addEventListener('load', () => loadFromHash(true));
-window.addEventListener('hashchange', () => loadFromHash(true));
-window.addEventListener('pageshow', () => loadFromHash(true));
-window.addEventListener('popstate', () => loadFromHash(true));
+window.addEventListener("load", () => loadFromHash(true));
+window.addEventListener("hashchange", () => loadFromHash(true));
+window.addEventListener("pageshow", () => loadFromHash(true));
+window.addEventListener("popstate", () => loadFromHash(true));
 setInterval(() => loadFromHash(false), 300);
-
 // ── 複製報告網址 ──────────────────────────────────────────────────────────────
 function copyReportUrl() {
   const url = location.href.split('#')[0] + '#' + document.getElementById('inputCode').value;
