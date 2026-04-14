@@ -250,32 +250,6 @@
     line-height: 1.6;
   }
 
-  /* 手動輸入觸發按鈕 */
-  .btn-manual-trigger {
-    display: block;
-    margin: 16px auto 0;
-    padding: 8px 20px;
-    background: transparent;
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    font-family: 'Noto Serif TC', serif;
-    font-size: 0.75rem;
-    color: var(--muted);
-    cursor: pointer;
-    letter-spacing: 0.08em;
-    transition: all 0.2s;
-  }
-  .btn-manual-trigger:hover {
-    border-color: var(--accent2);
-    color: var(--accent2);
-    background: #f5f3ff;
-  }
-  .btn-manual-trigger.active {
-    border-color: var(--accent2);
-    color: var(--accent2);
-    background: #eef0fb;
-  }
-
   /* 免責聲明 */
   .disclaimer {
     width: 100%; max-width: 560px;
@@ -318,14 +292,37 @@
   <div class="subtitle">FUNDUS EXAMINATION REPORT GENERATOR</div>
 </header>
 
-<div class="card">
-  <!-- QR 掃描區（主要入口） -->
-  <div class="section-title">掃描檢查報告 QR Code</div>
-  <div class="btn-row" style="margin-top:0;">
-    <button class="btn btn-primary" id="qrBtn" onclick="toggleQR()">⬡ 開啟掃描鏡頭</button>
+<div class="card" id="entryCard" style="display:none;">
+  <div class="section-title">輸入 8 位檢查代碼</div>
+  <input class="code-input" id="inputCode" type="text" maxlength="8"
+    placeholder="00000000" inputmode="numeric" autocomplete="off" oninput="onInput()">
+  <div class="char-counter"><span id="charCount">0</span> / 8 位</div>
+  <div class="error-msg" id="errorMsg">每位數只能為 0、1、2、3 或 9</div>
+
+  <div class="decoded-grid" id="decodedGrid">
+    <div class="eye-col">
+      <div class="eye-label">OD 右眼</div>
+      <div class="field-row"><span class="field-name">影像品質</span><span class="field-val" id="v_OD_img">-</span></div>
+      <div class="field-row"><span class="field-name">視神經盤</span><span class="field-val" id="v_OD_d">-</span></div>
+      <div class="field-row"><span class="field-name">黃斑部</span><span class="field-val" id="v_OD_m">-</span></div>
+      <div class="field-row"><span class="field-name">視網膜病變</span><span class="field-val" id="v_OD_r">-</span></div>
+    </div>
+    <div class="eye-col">
+      <div class="eye-label">OS 左眼</div>
+      <div class="field-row"><span class="field-name">影像品質</span><span class="field-val" id="v_OS_img">-</span></div>
+      <div class="field-row"><span class="field-name">視神經盤</span><span class="field-val" id="v_OS_d">-</span></div>
+      <div class="field-row"><span class="field-name">黃斑部</span><span class="field-val" id="v_OS_m">-</span></div>
+      <div class="field-row"><span class="field-name">視網膜病變</span><span class="field-val" id="v_OS_r">-</span></div>
+    </div>
   </div>
 
-  <div class="qr-section" id="qrSection" style="margin-top:16px;">
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="generateReport()">▶ 生成報告</button>
+    <button class="btn btn-qr" id="qrBtn" onclick="toggleQR()">⬡ 掃描 QR</button>
+  </div>
+
+  <div class="qr-section" id="qrSection">
+    <div class="divider">攝影機即時掃描</div>
     <div class="qr-viewport">
       <video id="qrVideo" playsinline autoplay muted></video>
       <div class="qr-overlay">
@@ -335,40 +332,7 @@
     <canvas id="qrCanvas"></canvas>
     <div class="scan-status scanning" id="scanStatus">● 正在掃描，請將 QR Code 對準框內…</div>
   </div>
-
-  <!-- 手動輸入區（預設隱藏） -->
-  <div id="manualInputArea" style="display:none; margin-top:16px;">
-    <div class="divider">手動輸入代碼</div>
-    <input class="code-input" id="inputCode" type="text" maxlength="8"
-      placeholder="00000000" inputmode="numeric" autocomplete="off" oninput="onInput()">
-    <div class="char-counter"><span id="charCount">0</span> / 8 位</div>
-    <div class="error-msg" id="errorMsg">每位數只能為 0、1、2、3 或 9</div>
-    <div class="decoded-grid" id="decodedGrid">
-      <div class="eye-col">
-        <div class="eye-label">OD 右眼</div>
-        <div class="field-row"><span class="field-name">影像品質</span><span class="field-val" id="v_OD_img">-</span></div>
-        <div class="field-row"><span class="field-name">視神經盤</span><span class="field-val" id="v_OD_d">-</span></div>
-        <div class="field-row"><span class="field-name">黃斑部</span><span class="field-val" id="v_OD_m">-</span></div>
-        <div class="field-row"><span class="field-name">視網膜病變</span><span class="field-val" id="v_OD_r">-</span></div>
-      </div>
-      <div class="eye-col">
-        <div class="eye-label">OS 左眼</div>
-        <div class="field-row"><span class="field-name">影像品質</span><span class="field-val" id="v_OS_img">-</span></div>
-        <div class="field-row"><span class="field-name">視神經盤</span><span class="field-val" id="v_OS_d">-</span></div>
-        <div class="field-row"><span class="field-name">黃斑部</span><span class="field-val" id="v_OS_m">-</span></div>
-        <div class="field-row"><span class="field-name">視網膜病變</span><span class="field-val" id="v_OS_r">-</span></div>
-      </div>
-    </div>
-    <div class="btn-row" style="margin-top:14px;">
-      <button class="btn btn-primary" onclick="generateReport()">▶ 生成報告</button>
-    </div>
-  </div>
 </div>
-
-<!-- 手動輸入觸發按鈕（固定在最下方） -->
-<button class="btn-manual-trigger" id="manualTriggerBtn" onclick="toggleManualInput()">
-  ✎ 手動輸入代碼
-</button>
 
 <div class="report-card" id="reportCard">
   <div class="report-header">
@@ -412,18 +376,6 @@ async function toggleQR() {
   qrActive ? stopQR() : await startQR();
 }
 
-function toggleManualInput() {
-  const area = document.getElementById('manualInputArea');
-  const btn = document.getElementById('manualTriggerBtn');
-  const open = area.style.display === 'none';
-  area.style.display = open ? 'block' : 'none';
-  btn.textContent = open ? '✕ 關閉手動輸入' : '✎ 手動輸入代碼';
-  btn.classList.toggle('active', open);
-  if (open) {
-    setTimeout(() => document.getElementById('inputCode').focus(), 100);
-  }
-}
-
 async function startQR() {
   const section = document.getElementById('qrSection');
   const btn = document.getElementById('qrBtn');
@@ -431,7 +383,7 @@ async function startQR() {
   const video = document.getElementById('qrVideo');
 
   section.style.display = 'block';
-  btn.textContent = '✕ 關閉鏡頭';
+  btn.textContent = '✕ 關閉掃描';
   btn.classList.add('active');
   qrActive = true;
 
@@ -522,7 +474,7 @@ function stopQR() {
   video.srcObject = null;
   document.getElementById('qrSection').style.display = 'none';
   const btn = document.getElementById('qrBtn');
-  btn.textContent = '⬡ 開啟掃描鏡頭';
+  btn.textContent = '⬡ 掃描 QR';
   btn.classList.remove('active');
   qrActive = false;
 }
@@ -1024,12 +976,6 @@ speechSynthesis.onvoiceschanged = ()=>speechSynthesis.getVoices();
 function loadFromHash() {
   const hash = location.hash.replace('#', '').trim();
   if (/^\d{8}$/.test(hash)) {
-    // 有 hash 代碼時，展開手動輸入區以顯示代碼（但不強制對焦）
-    const area = document.getElementById('manualInputArea');
-    const btn = document.getElementById('manualTriggerBtn');
-    area.style.display = 'block';
-    btn.textContent = '✕ 關閉手動輸入';
-    btn.classList.add('active');
     const inp = document.getElementById('inputCode');
     inp.value = hash;
     onInput();
