@@ -527,28 +527,35 @@ function generateReport() {
   const Overall = Math.max(OD_sev,OS_sev);
   const DISC=Math.max(OD_d,OS_d), MAC=Math.max(OD_m,OS_m), DR=Math.max(OD_r,OS_r);
 
-  const imgT =(v,s)=>v===0?`${s}眼底影像品質尚可，`:`${s}眼底影像品質不佳，判讀受限，`;
-  const discT=(v,s)=>v===0?`${s}視神經盤未見明顯異常，`:v<=3?`${s}視神經盤疑似異常，`:v===9?`${s}視神經盤無法判讀，`:'';
-  const macT =(v,s)=>v===0?`${s}黃斑部未見明顯異常，`:v<=3?`${s}黃斑部疑似異常，`:v===9?`${s}黃斑部無法判讀，`:'';
-  const drT  =(v,s)=>({0:`${s}未見明顯糖尿病視網膜病變。`,1:`${s}懷疑糖尿病視網膜病變。`,2:`${s}懷疑糖尿病視網膜病變，可能影響視力。`,3:`${s}糖尿病視網膜病變嚴重，需緊急處理。`,9:`${s}無法判讀糖尿病視網膜病變。`}[v]||'');
+  const strong = (txt, isAbnormal) => isAbnormal ? `<strong>${txt}</strong>` : txt;
+  const imgT =(v,s)=>strong(v===0?`${s}眼底影像品質尚可，`:`${s}眼底影像品質不佳，判讀受限，`, v!==0);
+  const discT=(v,s)=>v===0?`${s}視神經盤未見明顯異常，`:v<=3?strong(`${s}視神經盤疑似異常，`, true):v===9?strong(`${s}視神經盤無法判讀，`, true):'';
+  const macT =(v,s)=>v===0?`${s}黃斑部未見明顯異常，`:v<=3?strong(`${s}黃斑部疑似異常，`, true):v===9?strong(`${s}黃斑部無法判讀，`, true):'';
+  const drT  =(v,s)=>({
+    0:`${s}未見明顯糖尿病視網膜病變。`,
+    1:strong(`${s}懷疑糖尿病視網膜病變。`, true),
+    2:strong(`${s}懷疑糖尿病視網膜病變，可能影響視力。`, true),
+    3:strong(`${s}糖尿病視網膜病變嚴重，需緊急處理。`, true),
+    9:strong(`${s}無法判讀糖尿病視網膜病變。`, true)
+  }[v]||'');
 
   const R = imgT(OD_img,'右眼')+discT(OD_d,'右眼')+macT(OD_m,'右眼')+drT(OD_r,'右眼');
   const L = imgT(OS_img,'左眼')+discT(OS_d,'左眼')+macT(OS_m,'左眼')+drT(OS_r,'左眼');
-  const S = '綜合評估：'+({0:'目前未見明顯異常；',1:'疑似早期病變；',2:'已有視力風險；',3:'高風險狀態；',9:'影像判讀受限；'}[Overall]||'');
+  const S = '綜合評估：'+strong(({0:'目前未見明顯異常；',1:'疑似早期病變；',2:'已有視力風險；',3:'高風險狀態；',9:'影像判讀受限；'}[Overall]||''), Overall!==0);
   const edu = [
     DISC&&{1:'視神經疑似早期變化',2:'視神經可能異常',3:'視神經異常風險高',9:'視神經無法判讀'}[DISC],
     MAC &&{1:'黃斑部疑似早期變化',2:'黃斑部可能影響視力',3:'黃斑部異常風險高',9:'黃斑部無法判讀'}[MAC],
     DR  &&{1:'疑似早期糖尿病視網膜病變',2:'糖尿病視網膜病變可能影響視力',3:'糖尿病視網膜病變風險高',9:'糖尿病視網膜病變無法判讀'}[DR]
   ].filter(Boolean);
-  const E = edu.length ? edu.join('，')+'。' : '';
+  const E = edu.length ? strong(edu.join('，')+'。', true) : '';
   const A = '建議：'+({0:'定期追蹤。',1:'請定期追蹤並留意視力變化。',2:'建議轉診眼科進一步檢查。',3:'請儘速就醫。',9:'建議重新檢查。'}[Overall]||'');
 
-  const report = R+'\n'+L+'\n\n'+S+(E?'\n'+E:'')+'\n'+A;
+  const reportHtml = R+'<br>'+L+'<br><br>'+S+(E?'<br>'+E:'')+'<br>'+A;
 
   const badge = document.getElementById('sevBadge');
   badge.textContent = {0:'正常 NORMAL',1:'早期 EARLY',2:'警示 WARNING',3:'緊急 URGENT',9:'受限 LIMITED'}[Overall]||'';
   badge.className = 'severity-badge sev-'+Overall;
-  document.getElementById('reportText').textContent = report;
+  document.getElementById('reportText').innerHTML = reportHtml;
   const rc = document.getElementById('reportCard');
   rc.style.display = 'block';
   rc.scrollIntoView({behavior:'smooth',block:'nearest'});
