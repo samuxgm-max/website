@@ -982,6 +982,7 @@ function loadFromHash() {
   }
 }
 window.addEventListener('load', loadFromHash);
+window.addEventListener('hashchange', loadFromHash);
 
 // ── 複製報告網址 ──────────────────────────────────────────────────────────────
 function copyReportUrl() {
